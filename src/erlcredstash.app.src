@@ -1,0 +1,16 @@
+%% -*- mode: erlang;erlang-indent-level: 4;indent-tabs-mode: nil -*-
+%% ex: ts=4 sw=4 ft=erlang et
+
+{application, erlcredstash,
+ [{description, "Erlang secrets library"},
+  {vsn, git},
+  {registered, []},
+  {applications, [erlcloud
+                  ]},
+  {modules, []},
+  {env, []},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/dgulino/erlcredstash"}]},
+  {maintainers, []}
+ ]
+}.
