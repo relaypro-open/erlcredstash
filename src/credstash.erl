@@ -45,10 +45,12 @@ get_secret(Name, Table) ->
   HexDigest = hexlify(Digest),
   io:format("HexDigest: ~p~n",[HexDigest]),
   %% compare HMACs
-  IvLen = 128,
-  Ivec = crypto:rand_bytes(IvLen),
+  IvLen = 16,
+  Ivec = crypto:strong_rand_bytes(IvLen),
+  %%io:format("Ivec: ~w~n",[Ivec]),
+  %%<<Ivec:16, Ciphertext/binary>> = DecodedContents
   State = crypto:stream_init(aes_ctr, Key, Ivec),
-  UnencryptedText = crypto:stream_decrypt(State, Contents),
+  UnencryptedText = crypto:stream_decrypt(State, DecodedContents),
   UnencryptedText.
 
   %%<<X:256/integer>> = crypto:hmac(sha256, Key, base64:decode(Contents)),
