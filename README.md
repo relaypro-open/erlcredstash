@@ -1,6 +1,7 @@
-# erlcredstash: Credstash For Erlang #
+# erlcredstash: CredStash For Erlang #
 
-CredStash is a very simple, easy to use credential management and distribution system that uses AWS Key Management Service (KMS) for key wrapping and master-key storage, and DynamoDB for credential storage and sharing.
+erlcredstash is an erlang implementation of CredStash (python : https://github.com/fugue/credstash). CredStash is a very simple, easy to use credential management and distribution system that uses AWS Key Management Service (KMS) for key wrapping and master-key storage, and DynamoDB for credential storage and sharing.  
+credstash.
 
 ## Getting started ##
 You need to clone the repository and download rebar (if it's not already available in your path).
