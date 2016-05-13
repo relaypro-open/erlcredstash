@@ -25,7 +25,7 @@ get_secret(Name, Table) ->
   Ivec = <<1:128>>,
   State = crypto:stream_init(aes_ctr, Key, Ivec),
   {_NewState, Text} = crypto:stream_decrypt(State, DecodedContents),
-  Text.
+  {ok, Text}.
 
 get_secret(Name) ->
   Table = <<"credential-store">>,
@@ -60,7 +60,7 @@ put_secret(Name, Secret, Table) ->
           {<<"key">>, WrappedKey},
           {<<"contents">>, base64:encode(CText)},
           {<<"hmac">>, B64Hmac}],
-  {ok, DdbResponse } = erlcloud_ddb:put_item(Table, Data),
+  DdbResponse = erlcloud_ddb:put_item(Table, Data),
   DdbResponse.
   
 
@@ -69,21 +69,26 @@ put_secret(Name, Secret) ->
   put_secret(Name, Secret, Table).
 
 list_secrets(Table) ->
-  {ok, DdbResponse } = erlcloud_ddb2:scan(Table,
+  DdbResponse = erlcloud_ddb2:scan(Table,
                                        [
                                        {projection_expression, <<"#N, version">>},
                                        {expression_attribute_names, [{<<"#N">>, <<"name">>}]}
                                        ]
                                           ),
-  DdbResponse.
+  DdbResponse. 
 
 list_secrets() ->
   Table = <<"credential-store">>,
   list_secrets(Table).
 
 get_all_secrets(Table) ->
-  Secrets = list_secrets(Table),
-  [{proplists:get_value(<<"name">>,Secret),get_secret(proplists:get_value(<<"name">>,Secret),Table)} || Secret <- Secrets].
+  {ok,Secrets} = list_secrets(Table),
+  Values = lists:map(fun(Secret) -> 
+                         Name = proplists:get_value(<<"name">>,Secret),
+                         {ok, Value} = get_secret(Name,Table),
+                         {Name, Value}
+                     end, Secrets),
+  {ok, Values}.
 
 get_all_secrets() ->
   Table = <<"credential-store">>,
@@ -98,16 +103,13 @@ delete_secret(Name, Table) ->
                                        {expression_attribute_names, [{<<"#N">>, <<"name">>}]}
                                        ]
                                           ),
-  %%Secret = [[{<<"name">>,<<"test">>},
-  %%             {<<"version">>,<<"0000000000000000001">>}]],
-  Secrets = [ {{<<"name">>, {s, proplists:get_value(<<"name">>,Response)} },
-              {<<"version">>, {s, proplists:get_value(<<"version">>,Response)} }} || Response <- DdbResponse ],
-  io:format("Secrets: ~p~n",[Secrets]),
-  %%DeleteResponse = [erlcloud_ddb2:delete_item(Table, [{<<"name">>, {s, proplists:get_value(<<"name">>,Secret)}}]) || Secret <- DdbResponse],
-  DeleteResponse = [ erlcloud_ddb2:delete_item(Table, 
-                                             [Secret ], 
-                                             [{return_values, all_old}]) || Secret <- Secrets] ,
-  DeleteResponse.
+  Secret = [{<<"name">>,{s, <<"test">>}},
+               {<<"version">>,{s, <<"0000000000000000001">>}}],
+  DeleteResponse = erlcloud_ddb2:delete_item(Table, 
+                                             Secret , 
+                                             [{return_values, all_old}]) ,
+  {Response, _ } = DeleteResponse,
+  Response.
 
 delete_secret(Name) ->
   Table = <<"credential-store">>,
