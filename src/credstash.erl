@@ -1,5 +1,8 @@
+%%% @author Drew Gulino <dgulino@bandwidth.com>
+%%% @doc
+%%% Erlang implementation of credstash (https://github.com/fugue/credstash)
+%%% @end
 -module(credstash).
--author('dgulino@bandwidth.com').
 
 -export([
         delete_secret/1, delete_secret/2,
@@ -13,6 +16,20 @@
 -define(DEFAULT_INITIAL_VERSION, "0000000000000000001").
 -define(KMS_KEY, <<"alias/credstash">>).
 
+
+%%%------------------------------------------------------------------------------
+%%% delete_secret
+%%%------------------------------------------------------------------------------
+
+%%------------------------------------------------------------------------------
+%% @doc 
+%%
+%% ===Example===
+%% `
+%% credstash:delete_secret(<<"test">>,<<"credential-store">>).
+%% '
+%% @end
+%%------------------------------------------------------------------------------
 delete_secret(Name, Table) ->
   {ok, DdbResponse } = erlcloud_ddb2:scan(Table,
                                        [
@@ -36,6 +53,19 @@ delete_secret(Name) ->
   Table = ?DEFAULT_DDB_TABLE,
   delete_secret(Name, Table).
 
+%%%------------------------------------------------------------------------------
+%%% get_all_secrets
+%%%------------------------------------------------------------------------------
+
+%%------------------------------------------------------------------------------
+%% @doc 
+%%
+%% ===Example===
+%% `
+%% credstash:get_all_secrets(<<"credential-store">>).
+%% '
+%% @end
+%%------------------------------------------------------------------------------
 get_all_secrets(Table) ->
   {ok,Secrets} = list_secrets(Table),
   Values = lists:map(fun(Secret) -> 
@@ -49,6 +79,19 @@ get_all_secrets() ->
   Table = ?DEFAULT_DDB_TABLE,
   get_all_secrets(Table).
 
+%%%------------------------------------------------------------------------------
+%%% get_secret
+%%%------------------------------------------------------------------------------
+
+%%------------------------------------------------------------------------------
+%% @doc 
+%%
+%% ===Example===
+%% `
+%% credstash:get_secret(<<"test">>,<<"credential-store">>,<<"0000000000000000001">>).
+%% '
+%% @end
+%%------------------------------------------------------------------------------
 get_secret(Name, Table, Version) ->
   {ok, Ciphertext } = erlcloud_ddb2:get_item(Table, [{<<"name">>,{s,Name}},{<<"version">>,{s, Version}}]),
   decrypt_secret(Ciphertext, Name).
@@ -77,6 +120,19 @@ get_secret(Name) ->
   Table = ?DEFAULT_DDB_TABLE,
   get_secret(Name, Table).
 
+%%%------------------------------------------------------------------------------
+%%% list_secrets
+%%%------------------------------------------------------------------------------
+
+%%------------------------------------------------------------------------------
+%% @doc 
+%%
+%% ===Example===
+%% `
+%% credstash:list_secrets(<<"credential-store">>).
+%% '
+%% @end
+%%------------------------------------------------------------------------------
 list_secrets(Table) ->
   DdbResponse = erlcloud_ddb2:scan(Table,
                                        [
@@ -90,6 +146,19 @@ list_secrets() ->
   Table = ?DEFAULT_DDB_TABLE,
   list_secrets(Table).
 
+%%%------------------------------------------------------------------------------
+%%% put_secret
+%%%------------------------------------------------------------------------------
+
+%%------------------------------------------------------------------------------
+%% @doc 
+%%
+%% ===Example===
+%% `
+%% credstash:put_secret(<<"test">>,<<"best">>,<<"credential-store">>,<<"0000000000000000001">>).
+%% '
+%% @end
+%%------------------------------------------------------------------------------
 put_secret(Name, Secret, Table, Version) ->
   KmsKey = ?KMS_KEY,
   NumberOfBytes=64,
