@@ -108,7 +108,6 @@ get_secret(Name, Table) ->
                                            {expression_attribute_names, [{<<"#N">>, <<"name">>}]}
                                           ]
                                         ),
-  io:format("VersionResponse: ~p~n", [VersionResponse]),
   Count = proplists:get_value(<<"Count">>,VersionResponse),
   case Count == 0 of
     true -> {error, "Not Found"};
