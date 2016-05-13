@@ -11,7 +11,8 @@
 -define(DEFAULT_DDB_TABLE, <<"credential-store">>).
 
 get_secret(Name, Table) ->
-  {ok, Ciphertext } = erlcloud_ddb:get_item(Table, {Name, "0000000000000000001"}),
+  Version = "0000000000000000001",
+  {ok, Ciphertext } = erlcloud_ddb2:get_item(Table, [{<<"name">>,{s,Name}},{<<"version">>,{s, Version}}]),
   KeyBase64 = proplists:get_value(<<"key">>,Ciphertext),
   Hmac = proplists:get_value(<<"hmac">>,Ciphertext),
   Contents = proplists:get_value(<<"contents">>,Ciphertext),
@@ -61,7 +62,7 @@ put_secret(Name, Secret, Table) ->
           {<<"key">>, WrappedKey},
           {<<"contents">>, base64:encode(CText)},
           {<<"hmac">>, B64Hmac}],
-  DdbResponse = erlcloud_ddb:put_item(Table, Data),
+  DdbResponse = erlcloud_ddb2:put_item(Table, Data),
   DdbResponse.
   
 
