@@ -7,7 +7,8 @@
         get_all_secrets/0, get_all_secrets/1,
         delete_secret/1, delete_secret/2
        ]).
--define(KMS_KEY_ALGO, "AES-256").
+
+-define(DEFAULT_DDB_TABLE, <<"credential-store">>).
 
 get_secret(Name, Table) ->
   {ok, Ciphertext } = erlcloud_ddb:get_item(Table, {Name, "0000000000000000001"}),
@@ -28,7 +29,7 @@ get_secret(Name, Table) ->
   {ok, Text}.
 
 get_secret(Name) ->
-  Table = <<"credential-store">>,
+  Table = ?DEFAULT_DDB_TABLE,
   get_secret(Name, Table).
 
 
@@ -65,7 +66,7 @@ put_secret(Name, Secret, Table) ->
   
 
 put_secret(Name, Secret) ->
-  Table = <<"credential-store">>,
+  Table = ?DEFAULT_DDB_TABLE,
   put_secret(Name, Secret, Table).
 
 list_secrets(Table) ->
@@ -78,7 +79,7 @@ list_secrets(Table) ->
   DdbResponse. 
 
 list_secrets() ->
-  Table = <<"credential-store">>,
+  Table = ?DEFAULT_DDB_TABLE,
   list_secrets(Table).
 
 get_all_secrets(Table) ->
@@ -91,7 +92,7 @@ get_all_secrets(Table) ->
   {ok, Values}.
 
 get_all_secrets() ->
-  Table = <<"credential-store">>,
+  Table = ?DEFAULT_DDB_TABLE,
   get_all_secrets(Table).
 
 delete_secret(Name, Table) ->
@@ -103,14 +104,16 @@ delete_secret(Name, Table) ->
                                        {expression_attribute_names, [{<<"#N">>, <<"name">>}]}
                                        ]
                                           ),
-  Secret = [{<<"name">>,{s, <<"test">>}},
-               {<<"version">>,{s, <<"0000000000000000001">>}}],
-  DeleteResponse = erlcloud_ddb2:delete_item(Table, 
-                                             Secret , 
-                                             [{return_values, all_old}]) ,
-  {Response, _ } = DeleteResponse,
-  Response.
+  io:format("DdbResponse: ~p~n", [DdbResponse]),
+  Secrets = DdbResponse,
+  io:format("Secrets: ~p~n", [Secrets]),
+  DeleteResponse = lists:map(fun(Secret) -> erlcloud_ddb2:delete_item(Table, 
+                                             [{<<"name">>,{s, proplists:get_value(<<"name">>,Secret)}},
+                                              {<<"version">>,{s, proplists:get_value(<<"version">>,Secret)}}] , 
+                                             [{return_values, all_old}]) 
+                                            end, Secrets ),
+  DeleteResponse.
 
 delete_secret(Name) ->
-  Table = <<"credential-store">>,
+  Table = ?DEFAULT_DDB_TABLE,
   delete_secret(Name, Table).
