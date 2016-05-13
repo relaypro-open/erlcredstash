@@ -33,9 +33,20 @@ erlcloud:start().
 Then you can start making api calls, like:
 
 ```
-credstash:put_secret(<<"test">>,<<"best">>,<<"credential-store">>,<<"0000000000000000001">>).
+credstash:put_secret(<<"test">>,<<"xest">>).
 credstash:get_secret(<<"test">>,<<"credential-store">>,<<"0000000000000000001">>).
+credstash:put_secret(<<"test">>,<<"best">>,<<"credential-store">>,<<"0000000000000000002">>).
+credstash:get_secret(<<"test">>,<<"credential-store">>,<<"0000000000000000002">>).
+credstash:list_secrets().
 credstash:list_secrets(<<"credential-store">>).
+credstash:get_all_secrets().
 credstash:get_all_secrets(<<"credential-store">>).
 credstash:delete_secret(<<"test">>,<<"credential-store">>).
 ```
+
+TODO:
+```
+credstash:setup(<<"table_name">>)
+#For now, use the python implementation to setup credstash ddb tables.
+```
+
