@@ -51,6 +51,7 @@ credstash:setup(<<"table_name">>)
 ```
 
 Elixir iex:
+```
 $ ./iex.sh
 iex(1)> :ssl.start()
 :ok
@@ -58,3 +59,4 @@ iex(2)> :erlcloud.start()
 :ok
 iex(3)> :credstash.get_secret("zest")
 {:ok, "zest"}
+```
