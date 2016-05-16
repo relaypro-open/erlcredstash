@@ -35,7 +35,7 @@ if you want to use ENV variables pass the atom 'env' as the Config
 ```
 credstash:put_secret(<<"test">>,<<"xest">>, env).
 ```
-or specicy the config in each function:
+or specify the config in each function:
 ```
 Config = credstash:new("$AWS_ACCESS_KEY_ID","$AWS_ACCESS_KEY_ID").
 ```
