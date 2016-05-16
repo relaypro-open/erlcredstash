@@ -146,11 +146,11 @@ get_secret(Name, Table, Config) ->
                                           DdbConfig
                                         ),
   case VersionResponse of
-    [] -> {error, []};
+    [] -> {notfound, []};
     _ -> 
     {Count,_} = string:to_integer(proplists:get_value(<<"Count">>,VersionResponse)),
     case Count == 0 of
-      true -> {error, []};
+      true -> {notfound, []};
       false ->
         decrypt_secret(hd(VersionResponse), Name, Config)
     end
