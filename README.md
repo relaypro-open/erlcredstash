@@ -11,12 +11,7 @@ cd erlcredstash
 wget http://cloud.github.com/downloads/basho/rebar/rebar && chmod u+x rebar
 ```
 
-You can provide your amazon credentials in environmental variables.
 
-```
-export AWS_ACCESS_KEY_ID=<Your AWS Access Key>
-export AWS_SECRET_ACCESS_KEY=<Your AWS Secret Access Key>
-```
 To compile and run ErlCredStash
 ```
 make
@@ -30,18 +25,33 @@ ssl:start().
 erlcloud:start().
 ```
 
+You can either either either either either either either either provide your amazon credentials in environmental variables.
+
+```
+export AWS_ACCESS_KEY_ID=<Your AWS Access Key>
+export AWS_SECRET_ACCESS_KEY=<Your AWS Secret Access Key>
+```
+if you want to use ENV variables pass the atom 'env' as the Config
+```
+credstash:put_secret(<<"test">>,<<"xest">>, env).
+```
+or specicy the config in each function:
+```
+Config = credstash:new("$AWS_ACCESS_KEY_ID","$AWS_ACCESS_KEY_ID").
+```
+
 Then you can start making api calls, like:
 
 ```
-credstash:put_secret(<<"test">>,<<"xest">>).
-credstash:get_secret(<<"test">>,<<"credential-store">>,<<"0000000000000000001">>).
-credstash:put_secret(<<"test">>,<<"best">>,<<"credential-store">>,<<"0000000000000000002">>).
-credstash:get_secret(<<"test">>,<<"credential-store">>,<<"0000000000000000002">>).
-credstash:list_secrets().
-credstash:list_secrets(<<"credential-store">>).
-credstash:get_all_secrets().
-credstash:get_all_secrets(<<"credential-store">>).
-credstash:delete_secret(<<"test">>,<<"credential-store">>).
+credstash:put_secret(<<"test">>,<<"xest">>, Config).
+credstash:get_secret(<<"test">>,<<"credential-store">>,<<"0000000000000000001">>, Config).
+credstash:put_secret(<<"test">>,<<"best">>,<<"credential-store">>,<<"0000000000000000002">>, Config).
+credstash:get_secret(<<"test">>,<<"credential-store">>,<<"0000000000000000002">>, Config).
+credstash:list_secrets(Config).
+credstash:list_secrets(<<"credential-store">>, Config).
+credstash:get_all_secrets(Config).
+credstash:get_all_secrets(<<"credential-store">>, Config).
+credstash:delete_secret(<<"test">>,<<"credential-store">>, Config).
 ```
 
 TODO:
