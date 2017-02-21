@@ -31,11 +31,8 @@ You can either either either either either either either either provide your ama
 export AWS_ACCESS_KEY_ID=<Your AWS Access Key>
 export AWS_SECRET_ACCESS_KEY=<Your AWS Secret Access Key>
 ```
-if you want to use ENV variables pass the atom 'env' as the Config
-```
-credstash:put_secret(<<"test">>,<<"xest">>, env).
-```
-or specify the config in each function:
+
+Specify the config in each function:
 ```
 Config = credstash:new("$AWS_ACCESS_KEY_ID","$AWS_ACCESS_KEY_ID").
 ```
@@ -58,15 +55,4 @@ TODO:
 ```
 credstash:setup(<<"table_name">>)
 #For now, use the python implementation to setup credstash ddb tables.
-```
-
-Elixir iex:
-```
-$ ./iex.sh
-iex(1)> :ssl.start()
-:ok
-iex(2)> :erlcloud.start()
-:ok
-iex(3)> :credstash.get_secret("zest")
-{:ok, "zest"}
 ```
