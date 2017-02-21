@@ -25,14 +25,7 @@ ssl:start().
 erlcloud:start().
 ```
 
-You can either either either either either either either either provide your amazon credentials in environmental variables.
-
-```
-export AWS_ACCESS_KEY_ID=<Your AWS Access Key>
-export AWS_SECRET_ACCESS_KEY=<Your AWS Secret Access Key>
-```
-
-Specify the config in each function:
+You create a config to be used in each function:
 ```
 Config = credstash:new("$AWS_ACCESS_KEY_ID","$AWS_ACCESS_KEY_ID").
 ```
