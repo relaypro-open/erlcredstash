@@ -23,16 +23,22 @@ If you're using ErlCredStash in your application, add it as a dependency in your
 ```
 ssl:start().
 erlcloud:start().
+
+```
+Easiest way to set AWS creds and then invoke by passing the env atom:
+```
+erlcloud_ec2:configure("$AWS_ACCESS_KEY_ID","$AWS_ACCESS_KEY_ID").
 ```
 
-You create a config to be used in each function:
+You also create a config to be used in each function:
 ```
 Config = credstash:new("$AWS_ACCESS_KEY_ID","$AWS_ACCESS_KEY_ID").
 ```
 
-Then you can start making api calls, like:
+Then you can start making api calls, passing in either Config or env, like:
 
 ```
+credstash:list_secrets(env).
 credstash:put_secret(<<"test">>,<<"xest">>, Config).
 credstash:get_secret(<<"test">>,<<"credential-store">>,<<"0000000000000000001">>, Config).
 credstash:put_secret(<<"test">>,<<"best">>,<<"credential-store">>,<<"0000000000000000002">>, Config).
