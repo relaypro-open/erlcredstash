@@ -3,6 +3,7 @@
 %%% Erlang implementation of credstash (https://github.com/fugue/credstash)
 %%% @end
 -module(credstash).
+-include_lib("eunit/include/eunit.hrl").
 
 -export([
         new/2, new/4, new/6, 
@@ -10,7 +11,8 @@
         get_all_secrets/1, get_all_secrets/2,
         get_secret/2, get_secret/3 ,get_secret/4,
         list_secrets/1, list_secrets/2,
-        put_secret/3, put_secret/4, put_secret/5
+        put_secret/3, put_secret/4, put_secret/5,
+        get_env/0
        ]).
 
 -define(DEFAULT_DDB_TABLE, <<"credential-store">>).
@@ -41,6 +43,8 @@ new(AccessKeyID, SecretAccessKey, KmsHost, DdbHost, KmsPort, DdbPort) ->
   DdbConfig = erlcloud_ddb2:new(AccessKeyID, SecretAccessKey, DdbHost, DdbPort),
   {KmsConfig, DdbConfig}.
 
+get_env() ->
+    default_config().
 
 %%%------------------------------------------------------------------------------
 %%% delete_secret
@@ -126,7 +130,7 @@ get_secret(Name, Table, Version, Config) ->
     _ -> Config
   end,           
   {ok, Ciphertext } = erlcloud_ddb2:get_item(Table, [{<<"name">>,{s,Name}},{<<"version">>,{s, Version}}], DdbConfig),
-  decrypt_secret(Ciphertext, Name, Config).
+  decrypt_secret(Ciphertext, Config).
 
 get_secret(Name, Table, Config) ->
   {_KmsConfig, DdbConfig} = case Config of
@@ -152,7 +156,7 @@ get_secret(Name, Table, Config) ->
     case Count == 0 of
       true -> {notfound, []};
       false ->
-        decrypt_secret(hd(VersionResponse), Name, Config)
+        decrypt_secret(hd(VersionResponse), Config)
     end
   end.
 
@@ -191,24 +195,12 @@ list_secrets(Config) ->
   Table = ?DEFAULT_DDB_TABLE,
   list_secrets(Table, Config).
 
-%%%------------------------------------------------------------------------------
-%%% put_secret
-%%%------------------------------------------------------------------------------
 
-%%------------------------------------------------------------------------------
-%% @doc 
-%%
-%% ===Example===
-%% `
-%% credstash:put_secret(<<"test">>,<<"best">>,<<"credential-store">>,<<"0000000000000000001">>, env).
-%% '
-%% @end
-%%------------------------------------------------------------------------------
-put_secret(Name, Secret, Table, Version, Config) ->
-  {KmsConfig, DdbConfig} = case Config of
-    env -> default_config();
-    _ -> Config
-  end,           
+encrypt_secret(Name, Secret, Version, Config) ->
+  {KmsConfig, _DdbConfig} = case Config of
+                             env -> default_config();
+                             _ -> Config
+                           end,
   KmsKey = ?KMS_KEY,
   NumberOfBytes=64,
   {ok, KmsResponse} = erlcloud_kms:generate_data_key(KmsKey, [{number_of_bytes, NumberOfBytes},{encryption_context, [{}] } ], KmsConfig),
@@ -223,10 +215,32 @@ put_secret(Name, Secret, Table, Version, Config) ->
   Hmac = crypto:hmac(sha256, HmacKey, CText),
   B64Hmac = hexlify(Hmac),
   Data = [{<<"name">>, Name},
-          {<<"version">>, Version},
-          {<<"key">>, WrappedKey},
-          {<<"contents">>, base64:encode(CText)},
-          {<<"hmac">>, B64Hmac}],
+    {<<"version">>, Version},
+    {<<"key">>, WrappedKey},
+    {<<"contents">>, base64:encode(CText)},
+    {<<"hmac">>, B64Hmac}],
+  Data.
+
+
+%%%------------------------------------------------------------------------------
+%%% put_secret
+%%%------------------------------------------------------------------------------
+
+%%------------------------------------------------------------------------------
+%% @doc 
+%%
+%% ===Example===
+%% `
+%% credstash:put_secret(<<"test">>,<<"best">>,<<"credential-store">>,<<"0000000000000000001">>, env).
+%% '
+%% @end
+%%------------------------------------------------------------------------------
+put_secret(Name, Secret, Table, Version, Config) ->
+  {_KmsConfig, DdbConfig} = case Config of
+                             env -> default_config();
+                             _ -> Config
+                           end,
+  Data = encrypt_secret(Name, Secret, Version, Config),
   DdbResponse = erlcloud_ddb2:put_item(Table, Data, [], DdbConfig),
   DdbResponse.
 
@@ -238,7 +252,7 @@ put_secret(Name, Secret, Config) ->
   Table = ?DEFAULT_DDB_TABLE,
   put_secret(Name, Secret, Table, Config).
 
-decrypt_secret(Ciphertext, Name, Config) ->
+decrypt_secret(Ciphertext, Config) ->
   {KmsConfig, _DdbConfig} = case Config of
     env -> default_config();
     _ -> Config
@@ -255,13 +269,43 @@ decrypt_secret(Ciphertext, Name, Config) ->
   HexDigest = hexlify(Digest),
   case Hmac == HexDigest of
     false ->
-      {error, io_lib:format("Computed HMAC on ~s does not match stored HMAC", [Name])};
+      {error, io_lib:format("Computed HMAC does not match stored HMAC", [])};
     true ->
       Ivec = <<1:128>>,
       State = crypto:stream_init(aes_ctr, Key, Ivec),
       {_NewState, Text} = crypto:stream_decrypt(State, DecodedContents),
       {ok, Text}
-  end.    
+  end.
+
+
+my_test_() ->
+  {setup,
+    fun() ->
+      {ok, _AppsList} = application:ensure_all_started(erlcredstash)
+    end,
+    fun({ok, AppList}) ->
+      lists:foreach(fun (App) -> quiet_stop(App) end, AppList)
+    end,
+    [
+      ?_test(decrypt_secret_t())
+    ]}.
+
+decrypt_secret_t() ->
+  ssl:start(),
+  erlcloud:start(),
+  Name = <<"Test">>,
+  Secret = <<"1234567890abcdef">>,
+  Version = <<"1.0">>,
+  Config = default_config(),
+  Encrypted = encrypt_secret(Name, Secret, Version, Config),
+  {ok, Decrypted} = decrypt_secret(Encrypted, Config),
+  ?assertEqual(Secret, Decrypted).
+
+quiet_stop(App) ->
+  error_logger:tty(false),
+  Res = application:stop(App),
+  error_logger:tty(true),
+  Res.
 
 hexlify(Bin) when is_binary(Bin) ->
     << <<(hex(H)),(hex(L))>> || <<H:4,L:4>> <= Bin >>.
