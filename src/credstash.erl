@@ -55,7 +55,7 @@ get_env() ->
 %%
 %% ===Example===
 %% `
-%% credstash:delete_secret(<<"test">>,<<"credential-store">>).
+%% credstash:delete_secret(<<"test">>, <<"credential-store">>, env).
 %% '
 %% @end
 %%------------------------------------------------------------------------------
@@ -132,6 +132,15 @@ get_secret(Name, Table, Version, Config) ->
   {ok, Ciphertext } = erlcloud_ddb2:get_item(Table, [{<<"name">>,{s,Name}},{<<"version">>,{s, Version}}], DdbConfig),
   decrypt_secret(Ciphertext, Config).
 
+%%------------------------------------------------------------------------------
+%% @doc 
+%%
+%% ===Example===
+%% `
+%% credstash:get_secret(<<"test">>,<<"credential-store">>,env).
+%% '
+%% @end
+%%------------------------------------------------------------------------------
 get_secret(Name, Table, Config) ->
   {_KmsConfig, DdbConfig} = case Config of
     env -> default_config();
@@ -173,7 +182,7 @@ get_secret(Name, Config) ->
 %%
 %% ===Example===
 %% `
-%% credstash:list_secrets(<<"credential-store">>, env).
+%% credstash:list_secrets(<<"credential-store">>,env).
 %% '
 %% @end
 %%------------------------------------------------------------------------------
@@ -210,9 +219,8 @@ encrypt_secret(Name, Secret, Version, Config) ->
   HmacKey=binary:part(Plaintext, 32, byte_size(Plaintext) - byte_size(DataKey)),
   WrappedKey = CiphertextBlob,
   Ivec = <<1:128>>,
-  State = crypto:stream_init(aes_ctr, DataKey, Ivec),
-  {_NewState, CText} = crypto:stream_encrypt(State, Secret),
-  Hmac = crypto:hmac(sha256, HmacKey, CText),
+  CText = crypto:crypto_one_time(aes_ctr, DataKey, Ivec, Secret, true),
+  Hmac = crypto:mac(hmac, sha256, HmacKey, CText),
   B64Hmac = hexlify(Hmac),
   Data = [{<<"name">>, Name},
     {<<"version">>, Version},
@@ -244,6 +252,15 @@ put_secret(Name, Secret, Table, Version, Config) ->
   DdbResponse = erlcloud_ddb2:put_item(Table, Data, [], DdbConfig),
   DdbResponse.
 
+%%------------------------------------------------------------------------------
+%% @doc 
+%%
+%% ===Example===
+%% `
+%% credstash:put_secret(<<"test">>,<<"best">>,<<"credential-store">>,env).
+%% '
+%% @end
+%%------------------------------------------------------------------------------
 put_secret(Name, Secret, Table, Config) ->
   Version = ?DEFAULT_INITIAL_VERSION,
   put_secret(Name, Secret, Table, Version, Config).
@@ -265,15 +282,14 @@ decrypt_secret(Ciphertext, Config) ->
   Key=binary:part(Plaintext, 0, 32),
   HmacKey=binary:part(Plaintext, 32, byte_size(Plaintext) - byte_size(Key)),
   DecodedContents = base64:decode(Contents),
-  Digest = crypto:hmac(sha256, HmacKey, DecodedContents ),
+  Digest = crypto:mac(hmac, sha256, HmacKey, DecodedContents ),
   HexDigest = hexlify(Digest),
   case Hmac == HexDigest of
     false ->
       {error, io_lib:format("Computed HMAC does not match stored HMAC", [])};
     true ->
       Ivec = <<1:128>>,
-      State = crypto:stream_init(aes_ctr, Key, Ivec),
-      {_NewState, Text} = crypto:stream_decrypt(State, DecodedContents),
+      Text = crypto:crypto_one_time(aes_ctr, Key, Ivec, DecodedContents, false),
       {ok, Text}
   end.
 
@@ -281,6 +297,8 @@ decrypt_secret(Ciphertext, Config) ->
 my_test_() ->
   {setup,
     fun() ->
+      application:load(erlcloud),
+      application:set_env(erlcloud, aws_config, [{http_client, httpc}]),
       {ok, _AppsList} = application:ensure_all_started(erlcredstash)
     end,
     fun({ok, AppList}) ->
