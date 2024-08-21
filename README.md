@@ -18,6 +18,13 @@ make
 make run
 ```
 
+If your system is using aws-vault
+```
+aws-vault exec $USER -- rebar3 eunit
+aws-vault exec $USER -- make run
+# etc
+```
+
 If you're using ErlCredStash in your application, add it as a dependency in your application's configuration file.  To use ErlCredStash in the shell, you can start it by calling:
 
 ```
